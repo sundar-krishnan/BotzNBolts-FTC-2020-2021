@@ -1,0 +1,378 @@
+/* Copyright (c) 2017 FIRST. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
+ *
+ * Redistributions of source code must retain the above copyright notice, this list
+ * of conditions and the following disclaimer.
+ *
+ * Redistributions in binary form must reproduce the above copyright notice, this
+ * list of conditions and the following disclaimer in the documentation and/or
+ * other materials provided with the distribution.
+ *
+ * Neither the name of FIRST nor the names of its contributors may be used to endorse or
+ * promote products derived from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
+ * LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+package org.firstinspires.ftc.teamcode;
+
+// NKR
+import android.app.Activity;
+import android.graphics.Color;
+import android.view.View;
+// NKR
+
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
+
+// NKR
+import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
+import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
+import com.qualcomm.robotcore.hardware.NormalizedRGBA;
+import com.qualcomm.robotcore.hardware.SwitchableLight;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import java.util.Locale;
+
+// NKR
+
+/**
+ * This file contains an minimal example of a Linear "OpMode". An OpMode is a 'program' that runs in either
+ * the autonomous or the teleop period of an FTC match. The names of OpModes appear on the menu
+ * of the FTC Driver Station. When an selection is made from the menu, the corresponding OpMode
+ * class is instantiated on the Robot Controller and executed.
+ *
+ * This particular OpMode just executes a basic Tank Drive Teleop for a two wheeled robot
+ * It includes all the skeletal structure that all linear OpModes contain.
+ *
+ * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
+ * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
+ */
+
+@TeleOp(name="RRJ_OpMode_withColor", group="Linear Opmode")
+@Disabled
+public class RRJ_OpMode_withColor extends LinearOpMode {
+
+    // Declare OpMode members.
+    private ElapsedTime runtime = new ElapsedTime();
+    private DcMotor leftFrontDrive = null;
+    private DcMotor rightFrontDrive = null;
+    private DcMotor leftBackDrive = null;
+    private DcMotor rightBackDrive = null;
+    private Servo leftClawServo = null;
+    private Servo rightClawServo = null;
+    private Servo topClawServo = null;
+    private Servo clawWristServo = null;
+    private DcMotor armLifter = null;
+
+    private double servoPosition = 0.0;
+    static final double INCREMENT = 0.1;     // amount to slew servo each CYCLE_MS cycle
+    static final double INCREMENTWRIST = 0.1;
+    static final int CYCLE_MS = 100;     // period of each cycle
+    static final double MAX_POS = 0.7;     // Maximum rotational position
+    static final double MIN_POS = 0.0;     // Minimum rotational position
+    static final double MAX_POS_WRIST = 0.0;     // Maximum rotational position
+    static final double MIN_POS_WRIST = 1.0;     // Minimum rotational position
+    double speedAdjust = 7.0;
+    double position = 0.0; //(MAX_POS - MIN_POS) / 2; // Start at halfway position
+    double positionWrist = 5.0;
+    double armMotorPower = 1.0;
+    int targetPosition = 0;
+    double drivePower = 0.5;
+
+
+    // NKR
+    // values is a reference to the hsvValues array.
+    ColorSensor sensorColor;
+    DistanceSensor sensorDistance;
+    // NKR
+
+    @Override
+    public void runOpMode() {
+        telemetry.addData("Status", "Initialized");
+        telemetry.update();
+        float hsvValues[] = {0F, 0F, 0F};
+        final float values[] = hsvValues;
+        final double SCALE_FACTOR = 255;
+
+        initializeDriveMotor();
+        initializeServoMotor();
+        initializeArmMotor();
+        initializeServoMotorWrist();
+        // Wait for the game to start (driver presses PLAY)
+        waitForStart();
+        //runtime.reset();
+
+        // NKR
+        // get a reference to the color sensor and distance sensor.
+        sensorColor = hardwareMap.get(ColorSensor.class, "sensor_color_distance");
+        sensorDistance = hardwareMap.get(DistanceSensor.class, "sensor_color_distance");
+//        float hsvValues[] = {0F, 0F, 0F};
+//        final float values[] = hsvValues;
+//        final double SCALE_FACTOR = 255;
+        int relativeLayoutId = hardwareMap.appContext.getResources().getIdentifier("RelativeLayout", "id", hardwareMap.appContext.getPackageName());
+        final View relativeLayout = ((Activity) hardwareMap.appContext).findViewById(relativeLayoutId);
+
+        // NKR
+
+        // run until the end of the match (driver presses STOP)
+        while (opModeIsActive()) {
+
+//            driveBot();
+            driveBot2();
+            driveClaws();
+            driveArm();
+            driveClawWrist();
+
+            // Show the elapsed game time and wheel power.
+            telemetry.addData("Status", "Run Time: " + runtime.toString());
+            telemetry.addData("Drive Motor Front", "left (%.2f), right (%.2f)", leftFrontDrive.getPower(), rightFrontDrive.getPower());
+            telemetry.addData("Drive Motor Back", "left (%.2f), right (%.2f)", leftBackDrive.getPower(), rightBackDrive.getPower());
+            telemetry.addData("speedAdjust", "speed (%.2f)", speedAdjust);
+            telemetry.addData("Gamepad1 button pressed", gamepad1.getRobocolMsgType());
+            telemetry.addData("ServoMotors", "left (%.2f), right (%.2f)", leftClawServo.getPosition(), rightClawServo.getPosition());
+            telemetry.addData("ArmTargetPosition", "ArmTargetPosition: " + armLifter.getTargetPosition());
+            telemetry.addData("armLifterDirection", "ArmLifterDirection: " + armLifter.getDirection());
+            telemetry.addData("topClawServo", "topClawServo: " + topClawServo.getPosition() + " Direction " + topClawServo.getDirection());
+            telemetry.addData("WristClawServo", "WristClawServo: " + clawWristServo.getPosition());
+            telemetry.addData("Color", "Color: " + clawWristServo.getPosition());
+
+            // NKR
+            // convert the RGB values to HSV values.
+            // multiply by the SCALE_FACTOR.
+            // then cast it back to int (SCALE_FACTOR is a double)
+            Color.RGBToHSV((int) (sensorColor.red() * SCALE_FACTOR),
+                    (int) (sensorColor.green() * SCALE_FACTOR),
+                    (int) (sensorColor.blue() * SCALE_FACTOR),
+                    hsvValues);
+
+            // send the info back to driver station using telemetry function.
+            telemetry.addData("Distance (cm)",
+                    String.format(Locale.US, "%.02f", sensorDistance.getDistance(DistanceUnit.CM)));
+            telemetry.addData("Alpha", sensorColor.alpha());
+            telemetry.addData("Red  ", sensorColor.red());
+            telemetry.addData("Green", sensorColor.green());
+            telemetry.addData("Blue ", sensorColor.blue());
+            telemetry.addData("Hue", hsvValues[0]);
+
+            // change the background color to match the color detected by the RGB sensor.
+            // pass a reference to the hue, saturation, and value array as an argument
+            // to the HSVToColor method.
+            relativeLayout.post(new Runnable() {
+                public void run() {
+                    relativeLayout.setBackgroundColor(Color.HSVToColor(0xff, values));
+                }
+            });
+
+            // NKR
+
+            telemetry.update();
+        }
+    }
+
+    private void driveBot2() {
+        if (gamepad1.right_stick_x > 0.0) {
+            leftBackDrive.setPower(drivePower);
+            rightBackDrive.setPower(-drivePower);
+            leftFrontDrive.setPower(-drivePower);
+            rightFrontDrive.setPower(drivePower);
+        } else if (gamepad1.right_stick_x < 0.0) {
+            leftBackDrive.setPower(-drivePower);
+            rightBackDrive.setPower(drivePower);
+            leftFrontDrive.setPower(drivePower);
+            rightFrontDrive.setPower(-drivePower);
+
+        } else if (gamepad1.left_stick_x < 0.0) {
+            leftBackDrive.setPower(drivePower);
+            rightBackDrive.setPower(-drivePower);
+            leftFrontDrive.setPower(drivePower);
+            rightFrontDrive.setPower(-drivePower);
+
+        } else if (gamepad1.left_stick_x > 0.0) {
+            leftBackDrive.setPower(-drivePower);
+            rightBackDrive.setPower(drivePower);
+            leftFrontDrive.setPower(-drivePower);
+            rightFrontDrive.setPower(drivePower);
+
+        }
+//        else if(gamepad1.right_stick_y != 0)
+//        {
+//            leftBackDrive.setPower(drivePower);
+//            rightBackDrive.setPower(drivePower);
+//            leftFrontDrive.setPower(drivePower);
+//            rightFrontDrive.setPower(drivePower);
+//        }
+//        else if(gamepad1.right_stick_y == 0)
+        else {
+            leftBackDrive.setPower(gamepad1.right_stick_y / 2.0);
+            rightBackDrive.setPower(gamepad1.right_stick_y / 2.0);
+            leftFrontDrive.setPower(gamepad1.right_stick_y / 2.0);
+            rightFrontDrive.setPower(gamepad1.right_stick_y / 2.0);
+        }
+//        leftBackDrive.setPower((gamepad1.left_stick_y + gamepad1.left_stick_x + gamepad1.right_stick_x));
+//        rightBackDrive.setPower((gamepad1.left_stick_y + gamepad1.left_stick_x - gamepad1.right_stick_x));
+//        leftFrontDrive.setPower((gamepad1.left_stick_y - gamepad1.left_stick_x + gamepad1.right_stick_x));
+//        rightFrontDrive.setPower((gamepad1.left_stick_y - gamepad1.left_stick_x - gamepad1.right_stick_x));
+    }
+
+    private void initializeArmMotor() {
+        armLifter = hardwareMap.get(DcMotor.class, "ArmLifter");
+        armLifter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        targetPosition = armLifter.getTargetPosition();
+        armLifter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        armLifter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        armLifter.setTargetPosition(200);
+        armLifter.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        //armLifter.setDirection(DcMotor.Direction.FORWARD);
+        //armLifter.setTargetPosition(0);
+        //armLifter.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        //armLifter.setPower(1.0);
+    }
+
+    private void driveArm() {
+        if (gamepad1.dpad_down) {
+            if (targetPosition < 0) {
+                targetPosition = 0;
+            }
+            targetPosition += 2;
+            armMotorPower = 0.5;
+        } else if (gamepad1.dpad_up) {
+            if (targetPosition > 0) {
+                targetPosition = 0;
+            }
+            targetPosition -= 2;
+            armMotorPower = -0.5;
+        } else {
+            targetPosition = 0;
+            armMotorPower = 0.0;
+        }
+//        while (opModeIsActive() && armLifter.isBusy())
+//        {
+//            telemetry.addData("encoder",armLifter.getCurrentPosition() + "busy= " + armLifter.isBusy());
+//            telemetry.update();
+//            idle();
+//            sleep(1000);
+//        }
+        armLifter.setTargetPosition(targetPosition);
+        armLifter.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        armLifter.setPower(armMotorPower);
+        targetPosition = armLifter.getTargetPosition();
+
+
+//        armLifter.setTargetPosition(0);
+//        armLifter.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//        armLifter.setPower(0);
+//        armLifter.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    }
+
+    private void initializeDriveMotor() {
+        leftFrontDrive = hardwareMap.get(DcMotor.class, "LeftFrontDrive");
+        rightFrontDrive = hardwareMap.get(DcMotor.class, "RightFrontDrive");
+        leftBackDrive = hardwareMap.get(DcMotor.class, "LeftBackDrive");
+        rightBackDrive = hardwareMap.get(DcMotor.class, "RightBackDrive");
+
+        leftFrontDrive.setDirection(DcMotor.Direction.REVERSE);
+        leftBackDrive.setDirection(DcMotor.Direction.REVERSE);
+        rightFrontDrive.setDirection(DcMotor.Direction.FORWARD);
+        rightBackDrive.setDirection(DcMotor.Direction.FORWARD);
+
+        leftFrontDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        leftBackDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightBackDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightFrontDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+    }
+
+    private void initializeServoMotor() {
+        leftClawServo = hardwareMap.get(Servo.class, "LeftClaw");
+        rightClawServo = hardwareMap.get(Servo.class, "RightClaw");
+        topClawServo = hardwareMap.get(Servo.class, "TopClaw");
+        leftClawServo.setDirection(Servo.Direction.FORWARD);
+        rightClawServo.setDirection(Servo.Direction.REVERSE);
+        topClawServo.setDirection(Servo.Direction.FORWARD);
+        leftClawServo.setPosition(position);
+        rightClawServo.setPosition(position);
+        topClawServo.setPosition(position);
+    }
+
+    private void initializeServoMotorWrist() {
+        clawWristServo = hardwareMap.get(Servo.class, "ClawWrist");
+        clawWristServo.setDirection(Servo.Direction.FORWARD);
+        positionWrist = clawWristServo.getPosition();
+        clawWristServo.setPosition(positionWrist);
+    }
+
+    private void driveBot() {
+        if (gamepad1.dpad_left == true) {
+            speedAdjust -= 1;
+        }
+        if (gamepad1.dpad_right == true) {
+            speedAdjust += 1;
+        }
+
+        leftBackDrive.setPower((gamepad1.left_stick_y - gamepad1.left_stick_x - gamepad1.right_stick_x) * (-speedAdjust / 10));
+        rightBackDrive.setPower((gamepad1.left_stick_y - gamepad1.left_stick_x + gamepad1.right_stick_x) * (-speedAdjust / 10));
+        leftFrontDrive.setPower((gamepad1.left_stick_y + gamepad1.left_stick_x - gamepad1.right_stick_x) * (-speedAdjust / 10));
+        rightFrontDrive.setPower((gamepad1.left_stick_y + gamepad1.left_stick_x + gamepad1.right_stick_x) * (-speedAdjust / 10));
+    }
+
+    private void driveClaws() {
+        // slew the servo, according to the rampUp (direction) variable.
+        if (position != MAX_POS && gamepad1.y) {
+            // Keep stepping up until we hit the max value.
+            position += INCREMENT;
+            if (position >= MAX_POS) {
+                position = MAX_POS;
+            }
+        } else if (position != MIN_POS && gamepad1.a) {
+            // Keep stepping down until we hit the min value.
+            position -= INCREMENT;
+            if (position <= MIN_POS) {
+                position = MIN_POS;
+
+            }
+        }
+        // Set the servo to the new position and pause;
+        leftClawServo.setPosition(position);
+        rightClawServo.setPosition(position);
+        topClawServo.setPosition(position);
+    }
+
+    private void driveClawWrist() {
+        // slew the servo, according to the rampUp (direction) variable.
+        if (positionWrist != MAX_POS_WRIST && gamepad1.right_bumper) {
+            // Keep stepping up until we hit the max value.
+            positionWrist += INCREMENTWRIST;
+            if (positionWrist >= MAX_POS_WRIST) {
+                positionWrist = MAX_POS_WRIST;
+            }
+        } else if (positionWrist != MIN_POS_WRIST && gamepad1.left_bumper) {
+            // Keep stepping down until we hit the min value.
+            positionWrist -= INCREMENTWRIST;
+            if (positionWrist <= MIN_POS_WRIST) {
+                positionWrist = MIN_POS_WRIST;
+
+            }
+        }
+        // Set the servo to the new position and pause;
+        clawWristServo.setPosition(positionWrist);
+    }
+
+}
