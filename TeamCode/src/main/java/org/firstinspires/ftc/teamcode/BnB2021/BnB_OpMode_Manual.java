@@ -32,6 +32,7 @@ package org.firstinspires.ftc.teamcode.BnB2021;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -59,12 +60,15 @@ public class BnB_OpMode_Manual extends LinearOpMode {
     private DcMotor rightFrontDrive = null;
     private DcMotor leftBackDrive = null;
     private DcMotor rightBackDrive = null;
+    private DcMotor throwerDrive = null;
+    private DcMotor ringrollerDrive = null;
     private Servo grabberServo = null;
     private Servo collectorServo = null;
 //    private Servo topClawServo = null;
 //    private Servo leftClawWristServo = null;
 //    private Servo rightClawWristServo = null;
     private DcMotor armLifter = null;
+
 
     private double servoPosition = 0.0;
     static final double INCREMENT = 0.1;     // amount to slew servo each CYCLE_MS cycle
@@ -90,6 +94,7 @@ public class BnB_OpMode_Manual extends LinearOpMode {
         initializeDriveMotor();
         initializeServoMotor();
         initializeArmMotor();
+        initializeThrowerMotor();
 //        initializeServoMotorWrist();
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
@@ -244,6 +249,21 @@ public class BnB_OpMode_Manual extends LinearOpMode {
         rightBackDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFrontDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
+
+    private void initializeThrowerMotor()
+    {
+        throwerDrive = hardwareMap.get(DcMotor.class, "Thrower");
+        ringrollerDrive = hardwareMap.get(DcMotor.class, "RingRoller");
+
+        throwerDrive.setDirection(DcMotor.Direction.FORWARD);
+        ringrollerDrive.setDirection(DcMotor.Direction.REVERSE);
+
+        throwerDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        ringrollerDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        throwerDrive.setPower(100.0);
+        ringrollerDrive.setPower(1.0);
+    }
+
     private void initializeServoMotor()
     {
         grabberServo = hardwareMap.get(Servo.class, "Grabber");
