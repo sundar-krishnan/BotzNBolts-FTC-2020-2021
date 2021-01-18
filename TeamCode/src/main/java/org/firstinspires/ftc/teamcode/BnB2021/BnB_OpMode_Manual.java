@@ -94,12 +94,12 @@ public class BnB_OpMode_Manual extends LinearOpMode {
         initializeDriveMotor();
         initializeServoMotor();
         initializeArmMotor();
-        initializeThrowerMotor();
+
 //        initializeServoMotorWrist();
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         //runtime.reset();
-
+        initializeThrowerMotor();
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
 
@@ -186,7 +186,7 @@ public class BnB_OpMode_Manual extends LinearOpMode {
         targetPosition = armLifter.getTargetPosition();
         armLifter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         armLifter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        armLifter.setTargetPosition(0);
+        armLifter.setTargetPosition(1440);
         armLifter.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         //armLifter.setDirection(DcMotor.Direction.FORWARD);
         //armLifter.setTargetPosition(0);
@@ -255,12 +255,12 @@ public class BnB_OpMode_Manual extends LinearOpMode {
         throwerDrive = hardwareMap.get(DcMotor.class, "Thrower");
         ringrollerDrive = hardwareMap.get(DcMotor.class, "RingRoller");
 
-        throwerDrive.setDirection(DcMotor.Direction.FORWARD);
+        throwerDrive.setDirection(DcMotor.Direction.REVERSE);
         ringrollerDrive.setDirection(DcMotor.Direction.REVERSE);
 
         throwerDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         ringrollerDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        throwerDrive.setPower(100.0);
+        throwerDrive.setPower(1.0);
         ringrollerDrive.setPower(1.0);
     }
 
@@ -273,7 +273,7 @@ public class BnB_OpMode_Manual extends LinearOpMode {
         collectorServo.setDirection(Servo.Direction.FORWARD);
 //        topClawServo.setDirection(Servo.Direction.FORWARD);
         grabberServo.setPosition(position);
-        collectorServo.setPosition(position);
+        collectorServo.setPosition(MIN_POS);
 //        topClawServo.setPosition(position);
     }
 
@@ -331,7 +331,7 @@ public class BnB_OpMode_Manual extends LinearOpMode {
         }
         // Set the servo to the new position and pause;
         grabberServo.setPosition(position);
-        collectorServo.setPosition(MAX_POS);
+//        collectorServo.setPosition(MAX_POS);
 //        topClawServo.setPosition(position);
     }
 
