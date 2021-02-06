@@ -64,14 +64,11 @@ public class BnB_OpMode_Manual extends LinearOpMode {
     private DcMotor ringrollerDrive = null;
     private Servo grabberServo = null;
     private Servo collectorServo = null;
-//    private Servo topClawServo = null;
-//    private Servo leftClawWristServo = null;
-//    private Servo rightClawWristServo = null;
     private DcMotor armLifter = null;
 
 
     private double servoPosition = 0.0;
-    static final double INCREMENT = 0.1;     // amount to slew servo each CYCLE_MS cycle
+    static final double INCREMENT = 0.05;     // amount to slew servo each CYCLE_MS cycle
     static final double INCREMENTWRIST = 0.1;
     static final int    CYCLE_MS  =  100;     // period of each cycle
     static final double MAX_POS   =  1.0;     // Maximum rotational position
@@ -92,22 +89,26 @@ public class BnB_OpMode_Manual extends LinearOpMode {
         telemetry.update();
 
         initializeDriveMotor();
-        initializeServoMotor();
+        initializeGrabberServoMotor();
         initializeArmMotor();
 
 //        initializeServoMotorWrist();
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
-        //runtime.reset();
         initializeThrowerMotor();
+        initializeRingRollerMotor();
+        initializeCollectorServoMotor();
+
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
 
-//            driveBot();
             driveBot2();
-            driveClaws();
             driveArm();
-//            driveClawWrist();
+            GrabberClaw();
+            RingRollerDrive();
+            CollectorServoDrive();
+            ThrowerDrive();
+
 
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
@@ -118,6 +119,8 @@ public class BnB_OpMode_Manual extends LinearOpMode {
             telemetry.addData("ServoMotors", "left (%.2f), right (%.2f)", grabberServo.getPosition(), collectorServo.getPosition());
             telemetry.addData("ArmTargetPosition", "ArmTargetPosition: " + armLifter.getTargetPosition());
             telemetry.addData("armLifterDirection", "ArmLifterDirection: " + armLifter.getDirection());
+            telemetry.addData("Left Trigger", "Left Trigger: " + gamepad1.left_trigger);
+
 //            telemetry.addData("topClawServo", "topClawServo: " + topClawServo.getPosition() + " Direction " + topClawServo.getDirection());
 //            telemetry.addData("RightWristClawServo", "RightWristClawServo: " + rightClawWristServo.getPosition());
 //            telemetry.addData("LeftWristClawServo", "LeftWristClawServo: " + leftClawWristServo.getPosition());
@@ -127,14 +130,14 @@ public class BnB_OpMode_Manual extends LinearOpMode {
 
     private void driveBot2()
     {
-        if (gamepad1.right_stick_x > 0.0)
+        if (gamepad1.right_stick_x < 0.0)
         {
             leftBackDrive.setPower(drivePower);
             rightBackDrive.setPower(-drivePower);
             leftFrontDrive.setPower(-drivePower);
             rightFrontDrive.setPower(drivePower);
         }
-        else if(gamepad1.right_stick_x < 0.0)
+        else if(gamepad1.right_stick_x > 0.0)
         {
             leftBackDrive.setPower(-drivePower);
             rightBackDrive.setPower(drivePower);
@@ -182,16 +185,20 @@ public class BnB_OpMode_Manual extends LinearOpMode {
     private void initializeArmMotor()
     {
         armLifter = hardwareMap.get(DcMotor.class, "ArmLifter");
+        armLifter.setDirection(DcMotor.Direction.FORWARD);
+
         armLifter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        targetPosition = armLifter.getTargetPosition();
-        armLifter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        armLifter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        armLifter.setTargetPosition(1440);
-        armLifter.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        //armLifter.setDirection(DcMotor.Direction.FORWARD);
-        //armLifter.setTargetPosition(0);
-        //armLifter.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        armLifter.setPower(1.0);
+
+//        armLifter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        targetPosition = armLifter.getTargetPosition();
+//        armLifter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//        armLifter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+//        armLifter.setTargetPosition(1440);
+//        armLifter.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//        //armLifter.setDirection(DcMotor.Direction.FORWARD);
+//        //armLifter.setTargetPosition(0);
+//        //armLifter.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//        armLifter.setPower(1.0);
     }
 
     private void driveArm()
@@ -215,10 +222,11 @@ public class BnB_OpMode_Manual extends LinearOpMode {
         }
 //        while (opModeIsActive() && armLifter.isBusy())
 //        {
-//            telemetry.addData("encoder",armLifter.getCurrentPosition() + "busy= " + armLifter.isBusy());
-//            telemetry.update();
-//            idle();
-//            sleep(1000);
+//            telemetry.addData("ArmLifter-encoder",  "Back Running to %7d :%7d", armLifter.getCurrentPosition(),  targetPosition);
+////            telemetry.addData("encoder",armLifter.getCurrentPosition() + "busy= " + armLifter.isBusy());
+////           telemetry.update();
+////            idle();
+////            sleep(1000);
 //        }
         armLifter.setTargetPosition(targetPosition);
         armLifter.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -253,28 +261,82 @@ public class BnB_OpMode_Manual extends LinearOpMode {
     private void initializeThrowerMotor()
     {
         throwerDrive = hardwareMap.get(DcMotor.class, "Thrower");
-        ringrollerDrive = hardwareMap.get(DcMotor.class, "RingRoller");
-
         throwerDrive.setDirection(DcMotor.Direction.REVERSE);
-        ringrollerDrive.setDirection(DcMotor.Direction.REVERSE);
-
         throwerDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        throwerDrive.setPower(1.0);
+    }
+
+    private void ThrowerDrive()
+    {
+        if (gamepad1.left_trigger > 0.0)
+            throwerDrive.setPower(1.0);
+        else
+            throwerDrive.setPower(0.0);
+
+    }
+    private void initializeRingRollerMotor()
+    {
+        ringrollerDrive = hardwareMap.get(DcMotor.class, "RingRoller");
+        ringrollerDrive.setDirection(DcMotor.Direction.REVERSE);
         ringrollerDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        throwerDrive.setPower(1.0);
         ringrollerDrive.setPower(1.0);
     }
 
-    private void initializeServoMotor()
+    private void RingRollerDrive()
+    {
+        if (gamepad1.left_bumper)
+            ringrollerDrive.setPower(-1.0);
+        else
+            ringrollerDrive.setPower(1.0);
+
+    }
+
+    private void initializeGrabberServoMotor()
     {
         grabberServo = hardwareMap.get(Servo.class, "Grabber");
-        collectorServo = hardwareMap.get(Servo.class, "Collector");
-//        topClawServo = hardwareMap.get(Servo.class, "TopClaw");
         grabberServo.setDirection(Servo.Direction.FORWARD);
+        grabberServo.setPosition(MAX_POS);
+        position = MAX_POS;
+    }
+
+    private void initializeCollectorServoMotor()
+    {
+        collectorServo = hardwareMap.get(Servo.class, "Collector");
         collectorServo.setDirection(Servo.Direction.FORWARD);
-//        topClawServo.setDirection(Servo.Direction.FORWARD);
+        collectorServo.setPosition(MAX_POS);
+    }
+
+    private  void CollectorServoDrive()
+    {
+        if(gamepad1.right_bumper)
+           collectorServo.setPosition(MAX_POS);
+        else
+            collectorServo.setPosition(-MAX_POS);
+    }
+
+    private void GrabberClaw()
+    {
+        // slew the servo, according to the rampUp (direction) variable.
+        if (position!=MAX_POS && gamepad1.y)
+        {
+            // Keep stepping up until we hit the max value.
+            position += INCREMENT ;
+            if (position >= MAX_POS )
+            {
+                position = MAX_POS;
+            }
+        }
+        else if (position != MIN_POS && gamepad1.a)
+        {
+            // Keep stepping down until we hit the min value.
+            position -= INCREMENT ;
+            if (position <= MIN_POS )
+            {
+                position = MIN_POS;
+            }
+        }
+        // Set the servo to the new position and pause;
         grabberServo.setPosition(position);
-        collectorServo.setPosition(MIN_POS);
-//        topClawServo.setPosition(position);
     }
 
 //    private void initializeServoMotorWrist()
@@ -306,34 +368,6 @@ public class BnB_OpMode_Manual extends LinearOpMode {
 //        leftFrontDrive.setPower((gamepad1.left_stick_y + gamepad1.left_stick_x - gamepad1.right_stick_x)*(-speedAdjust/10));
 //        rightFrontDrive.setPower((gamepad1.left_stick_y + gamepad1.left_stick_x + gamepad1.right_stick_x)*(-speedAdjust/10));
 //    }
-
-    private void  driveClaws()
-    {
-        // slew the servo, according to the rampUp (direction) variable.
-        if (position!=MAX_POS && gamepad1.y)
-        {
-            // Keep stepping up until we hit the max value.
-            position += INCREMENT ;
-            if (position >= MAX_POS )
-            {
-                position = MAX_POS;
-            }
-        }
-        else if (position != MIN_POS && gamepad1.a)
-        {
-            // Keep stepping down until we hit the min value.
-            position -= INCREMENT ;
-            if (position <= MIN_POS )
-            {
-                position = MIN_POS;
-
-            }
-        }
-        // Set the servo to the new position and pause;
-        grabberServo.setPosition(position);
-//        collectorServo.setPosition(MAX_POS);
-//        topClawServo.setPosition(position);
-    }
 
 //    private void  driveClawWrist()
 //    {
